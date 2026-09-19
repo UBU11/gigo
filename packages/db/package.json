@@ -1,0 +1,26 @@
+{
+  "name": "@campus/db",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "db:generate": "drizzle-kit generate",
+    "db:migrate": "drizzle-kit migrate",
+    "db:check": "drizzle-kit check"
+  },
+  "dependencies": {
+    "drizzle-orm": "^0.40.0",
+    "pg": "^8.13.3"
+  },
+  "devDependencies": {
+    "@campus/tsconfig": "workspace:*",
+    "@types/bun": "^1.2.0",
+    "@types/pg": "^8.11.11",
+    "dotenv": "^16.4.7",
+    "drizzle-kit": "^0.30.5",
+    "typescript": "^5.7.3"
+  }
+}
