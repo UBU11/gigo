@@ -9,7 +9,9 @@ const EnvSchema = z.object({
 	DATABASE_URL: z
 		.string()
 		.default("postgresql://campus:campus_secret@localhost:5432/campus_db"),
-	REDIS_URL: z.string().default("redis://localhost:6379"),
+	DRAGONFLY_URL: z
+		.string()
+		.default(process.env.DRAGONFLY_URL || process.env.REDIS_URL || "redis://localhost:6379"),
 	BETTER_AUTH_SECRET: z
 		.string()
 		.min(16)

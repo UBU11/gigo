@@ -40,6 +40,7 @@ services:
     environment:
       PORT: 3000
       DATABASE_URL: postgresql://campus:campus_secret@postgres:5432/campus_db
+      DRAGONFLY_URL: redis://dragonfly:6379
       REDIS_URL: redis://dragonfly:6379
     depends_on:
       postgres:
