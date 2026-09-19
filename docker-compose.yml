@@ -1,0 +1,64 @@
+services:
+  postgres:
+    image: postgres:17-alpine
+    container_name: campus_postgres
+    environment:
+      POSTGRES_USER: campus
+      POSTGRES_PASSWORD: campus_secret
+      POSTGRES_DB: campus_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U campus -d campus_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  dragonfly:
+    image: docker.dragonflydb.io/dragonflydb/dragonfly:latest
+    container_name: campus_dragonfly
+    ports:
+      - "6379:6379"
+    volumes:
+      - dragonfly_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  api:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+    container_name: campus_api
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      PORT: 3000
+      DATABASE_URL: postgresql://campus:campus_secret@postgres:5432/campus_db
+      REDIS_URL: redis://dragonfly:6379
+    depends_on:
+      postgres:
+        condition: service_healthy
+      dragonfly:
+        condition: service_healthy
+
+  caddy:
+    image: caddy:2-alpine
+    container_name: campus_caddy
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./apps/caddy/Caddyfile:/etc/caddy/Caddyfile:ro
+    depends_on:
+      - api
+
+volumes:
+  postgres_data:
+  dragonfly_data:

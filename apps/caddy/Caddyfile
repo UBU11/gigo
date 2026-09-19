@@ -1,0 +1,15 @@
+api.collegeplatform.internal {
+    tls /etc/caddy/certs/origin.pem /etc/caddy/certs/origin.key
+
+    encode zstd gzip
+
+    reverse_proxy api:3000 {
+        header_up Host {host}
+        header_up X-Real-IP {header.CF-Connecting-IP}
+        header_up X-Forwarded-For {header.CF-Connecting-IP}
+        header_up X-Forwarded-Proto {scheme}
+
+        header_up Upgrade {header.Upgrade}
+        header_up Connection {header.Connection}
+    }
+}
