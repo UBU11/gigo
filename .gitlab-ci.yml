@@ -1,0 +1,48 @@
+image: oven/bun:1.2
+
+variables:
+  TURBO_TELEMETRY_DISABLED: "1"
+  PNPM_HOME: "/root/.local/share/pnpm"
+
+cache:
+  key:
+    files:
+      - pnpm-lock.yaml
+  paths:
+    - .pnpm-store
+    - .turbo
+
+before_script:
+  - bun add -g pnpm@11.9.0
+  - export PATH="$HOME/.bun/bin:$PATH"
+  - pnpm config set store-dir .pnpm-store
+  - pnpm install --frozen-lockfile
+
+stages:
+  - test
+  - build
+
+typecheck:
+  stage: test
+  script:
+    - pnpm turbo run typecheck
+
+test:
+  stage: test
+  script:
+    - pnpm turbo run test
+
+lint:
+  stage: test
+  script:
+    - pnpm turbo run lint
+
+build:
+  stage: build
+  script:
+    - pnpm turbo run build
+  artifacts:
+    name: "$CI_COMMIT_REF_SLUG-dist"
+    paths:
+      - apps/web/dist
+    expire_in: 1 week
