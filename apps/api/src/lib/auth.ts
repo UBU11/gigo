@@ -23,7 +23,9 @@ export const auth = betterAuth({
 		user: {
 			create: {
 				before: async (user) => {
-					if (!user.email.endsWith(`@${env.CAMPUS_EMAIL_DOMAIN}`)) {
+					const normalizedEmail = user.email.trim().toLowerCase();
+					const normalizedDomain = env.CAMPUS_EMAIL_DOMAIN.trim().toLowerCase();
+					if (!normalizedEmail.endsWith(`@${normalizedDomain}`)) {
 						throw new Error(
 							`UNAUTHORIZED_DOMAIN: Registration restricted to @${env.CAMPUS_EMAIL_DOMAIN}`,
 						);

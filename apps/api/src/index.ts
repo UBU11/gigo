@@ -23,7 +23,9 @@ app.route("/api/collab", collabRoutes);
 const server = Bun.serve<SocketContext>({
 	port: env.PORT,
 	fetch(req, serverInstance) {
+		const url = new URL(req.url);
 		if (
+			url.pathname === "/ws" &&
 			serverInstance.upgrade(req, {
 				data: { userId: "anonymous", isAlive: true },
 			})
