@@ -11,7 +11,11 @@ const EnvSchema = z.object({
 		.default("postgresql://campus:campus_secret@localhost:5432/campus_db"),
 	DRAGONFLY_URL: z
 		.string()
-		.default(process.env.DRAGONFLY_URL || process.env.REDIS_URL || "redis://localhost:6379"),
+		.default(
+			process.env.DRAGONFLY_URL ||
+				process.env.REDIS_URL ||
+				"redis://localhost:6379",
+		),
 	BETTER_AUTH_SECRET: z
 		.string()
 		.min(16)
@@ -19,6 +23,8 @@ const EnvSchema = z.object({
 	BETTER_AUTH_URL: z.string().default("http://localhost:3000"),
 	GOOGLE_CLIENT_ID: z.string().optional(),
 	GOOGLE_CLIENT_SECRET: z.string().optional(),
+	TICKET_SIGNING_PRIVATE_KEY: z.string().optional(),
+	TICKET_VERIFY_PUBLIC_KEY: z.string().optional(),
 });
 
 export const env = EnvSchema.parse(process.env);

@@ -1,5 +1,5 @@
 import type { ServerWebSocket } from "bun";
-import { handlePong, setupKeepAlive, type SocketContext } from "./heartbeat";
+import { handlePong, type SocketContext, setupKeepAlive } from "./heartbeat";
 
 export const websocketHandlers = {
 	open(ws: ServerWebSocket<SocketContext>) {
