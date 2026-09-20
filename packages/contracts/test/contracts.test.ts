@@ -14,6 +14,7 @@ import {
 	TicketStatusSchema,
 	TicketTokenPayloadSchema,
 	UpdatePublicProfileSchema,
+	UserTicketDtoSchema,
 } from "../src";
 
 describe("Contracts Schema Validation", () => {
@@ -79,10 +80,33 @@ describe("Contracts Schema Validation", () => {
 				.success,
 		).toBe(true);
 		expect(
+			CheckInTicketSchema.safeParse({
+				ticketToken: "valid-long-token",
+				eventId: "123e4567-e89b-12d3-a456-426614174000",
+			}).success,
+		).toBe(true);
+		expect(
+			CheckInTicketSchema.safeParse({
+				ticketToken: "valid-long-token",
+				eventId: "invalid-uuid",
+			}).success,
+		).toBe(false);
+		expect(
 			CheckInTicketSchema.safeParse({ ticketToken: "short" }).success,
 		).toBe(false);
 		expect(TicketStatusSchema.safeParse("ISSUED").success).toBe(true);
 		expect(TicketStatusSchema.safeParse("INVALID").success).toBe(false);
+
+		const validTicketDto = {
+			id: "123e4567-e89b-12d3-a456-426614174000",
+			eventId: "123e4567-e89b-12d3-a456-426614174001",
+			userId: "usr_1",
+			status: "ISSUED",
+			signedToken: "signed.jwt.token",
+			checkedInAt: null,
+			createdAt: new Date(),
+		};
+		expect(UserTicketDtoSchema.safeParse(validTicketDto).success).toBe(true);
 	});
 
 	it("validates institutional email domain schema", () => {

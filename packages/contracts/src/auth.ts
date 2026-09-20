@@ -14,6 +14,7 @@ export const AuthSessionUserSchema = z.object({
 	email: z.string().email(),
 	emailVerified: z.boolean(),
 	image: z.string().nullable().optional(),
+	role: z.string().optional(),
 });
 
 export type AuthSessionUser = z.infer<typeof AuthSessionUserSchema>;
