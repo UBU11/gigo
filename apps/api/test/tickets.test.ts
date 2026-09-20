@@ -9,7 +9,9 @@ import {
 	getUserTickets,
 } from "../src/modules/tickets/service";
 import { executeCheckIn } from "../src/modules/tickets/check-in";
+import { ticketRoutes } from "../src/modules/tickets/routes";
 import { cleanupTestData, createTestEvent, createTestUser } from "./fixtures";
+import { Hono } from "hono";
 
 describe("Ticket Cryptographic Issuance Service", () => {
 	it("generates an Ed25519-signed ticket token verifiable via public key", async () => {
@@ -248,7 +250,6 @@ describe("User Tickets Service", () => {
 
 	afterAll(async () => {
 		await cleanupTestData();
-		await pool.end();
 	});
 
 	it("retrieves all claimed tickets for a user", async () => {
@@ -263,5 +264,128 @@ describe("User Tickets Service", () => {
 		expect(userTickets.length).toBe(2);
 		expect(userTickets[0]?.userId).toBe(user.id);
 		expect(userTickets[1]?.userId).toBe(user.id);
+	});
+});
+
+describe("Ticket HTTP Routes & RBAC Integration", () => {
+	beforeEach(async () => {
+		await cleanupTestData();
+	});
+
+	afterAll(async () => {
+		await cleanupTestData();
+		await pool.end();
+	});
+
+	it("GET / rejects unauthenticated requests with 401", async () => {
+		const app = new Hono().route("/api/tickets", ticketRoutes);
+		const res = await app.request("/api/tickets");
+		expect(res.status).toBe(401);
+		const body = await res.json();
+		expect(body).toEqual({ error: "UNAUTHORIZED" });
+	});
+
+	it("GET / returns user's claimed tickets when authenticated", async () => {
+		const user = await createTestUser();
+		const event = await createTestEvent(10);
+		await claimTicketAtomic(event.id, user.id);
+
+		const app = new Hono();
+		app.use("*", async (c, next) => {
+			c.set("user", { id: user.id, role: "user" });
+			await next();
+		});
+		app.route("/api/tickets", ticketRoutes);
+
+		const res = await app.request("/api/tickets");
+		expect(res.status).toBe(200);
+		const body = (await res.json()) as {
+			success: boolean;
+			tickets: Array<{ id: string; userId: string }>;
+		};
+		expect(body.success).toBe(true);
+		expect(body.tickets.length).toBe(1);
+		expect(body.tickets[0]?.userId).toBe(user.id);
+	});
+
+	it("POST /check-in rejects regular student with 403 FORBIDDEN", async () => {
+		const student = await createTestUser();
+		const app = new Hono();
+		app.use("*", async (c, next) => {
+			c.set("user", { id: student.id, role: "user" });
+			await next();
+		});
+		app.route("/api/tickets", ticketRoutes);
+
+		const res = await app.request("/api/tickets/check-in", {
+			method: "POST",
+			headers: { "Content-Type": "application/json" },
+			body: JSON.stringify({ ticketToken: "valid-token-longer-than-10" }),
+		});
+		expect(res.status).toBe(403);
+		const body = await res.json();
+		expect(body).toEqual({ error: "FORBIDDEN" });
+	});
+
+	it("POST /check-in allows organizer to check in a valid ticket", async () => {
+		const student = await createTestUser();
+		const organizer = await createTestUser();
+		const event = await createTestEvent(10);
+		const claim = await claimTicketAtomic(event.id, student.id);
+		expect(claim.success).toBe(true);
+		if (!claim.success) return;
+
+		const app = new Hono();
+		app.use("*", async (c, next) => {
+			c.set("user", { id: organizer.id, role: "organizer" });
+			await next();
+		});
+		app.route("/api/tickets", ticketRoutes);
+
+		const res = await app.request("/api/tickets/check-in", {
+			method: "POST",
+			headers: { "Content-Type": "application/json" },
+			body: JSON.stringify({
+				ticketToken: claim.ticket.signedToken,
+				eventId: event.id,
+			}),
+		});
+		expect(res.status).toBe(200);
+		const body = (await res.json()) as {
+			success: boolean;
+			ticket: { id: string };
+		};
+		expect(body.success).toBe(true);
+		expect(body.ticket.id).toBe(claim.ticket.id);
+	});
+
+	it("POST /check-in returns 409 when ticket is already checked in", async () => {
+		const student = await createTestUser();
+		const organizer = await createTestUser();
+		const event = await createTestEvent(10);
+		const claim = await claimTicketAtomic(event.id, student.id);
+		expect(claim.success).toBe(true);
+		if (!claim.success) return;
+
+		await executeCheckIn(claim.ticket.signedToken, event.id);
+
+		const app = new Hono();
+		app.use("*", async (c, next) => {
+			c.set("user", { id: organizer.id, role: "organizer" });
+			await next();
+		});
+		app.route("/api/tickets", ticketRoutes);
+
+		const res = await app.request("/api/tickets/check-in", {
+			method: "POST",
+			headers: { "Content-Type": "application/json" },
+			body: JSON.stringify({
+				ticketToken: claim.ticket.signedToken,
+				eventId: event.id,
+			}),
+		});
+		expect(res.status).toBe(409);
+		const body = await res.json();
+		expect(body).toEqual({ error: "ALREADY_CHECKED_IN_OR_INVALID" });
 	});
 });

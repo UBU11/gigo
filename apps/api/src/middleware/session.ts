@@ -9,6 +9,12 @@ declare module "hono" {
 }
 
 export async function sessionMiddleware(c: Context, next: Next) {
+	// ponytail: reuse existing context user if injected upstream or in test
+	if (c.get("user")) {
+		await next();
+		return;
+	}
+
 	const session = await auth.api.getSession({
 		headers: c.req.raw.headers,
 	});
