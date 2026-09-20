@@ -1,6 +1,20 @@
 import { signTicket } from "@campus/crypto";
-import { db, tickets } from "@campus/db";
+import { db, events, tickets } from "@campus/db";
+import { and, eq, gt, sql } from "drizzle-orm";
 import { getTicketKeys } from "../../lib/keys";
+
+interface UniqueViolationError {
+	code: string;
+}
+
+function isUniqueViolation(error: unknown): error is UniqueViolationError {
+	return (
+		typeof error === "object" &&
+		error !== null &&
+		"code" in error &&
+		(error as UniqueViolationError).code === "23505"
+	);
+}
 
 export async function generateTicketToken(
 	eventId: string,
@@ -26,26 +40,51 @@ export async function claimTicketAtomic(eventId: string, userId: string) {
 	const ticketId = crypto.randomUUID();
 	const signedToken = await generateTicketToken(eventId, userId, ticketId);
 
-	return db.transaction(async (tx) => {
-		const newTicket = await tx
-			.insert(tickets)
-			.values({
-				id: ticketId,
-				eventId,
-				userId,
-				status: "ISSUED",
-				signedToken,
-			})
-			.returning();
+	try {
+		return await db.transaction(async (tx) => {
+			const event = await tx
+				.update(events)
+				.set({ capacity: sql`${events.capacity} - 1` })
+				.where(and(eq(events.id, eventId), gt(events.capacity, 0)))
+				.returning({ id: events.id });
 
-		if (!newTicket[0]) {
+			if (!event.length) {
+				return {
+					success: false as const,
+					error: "EVENT_SOLD_OUT" as const,
+					status: 409 as const,
+				};
+			}
+
+			const newTicket = await tx
+				.insert(tickets)
+				.values({
+					id: ticketId,
+					eventId,
+					userId,
+					status: "ISSUED",
+					signedToken,
+				})
+				.returning();
+
+			if (!newTicket[0]) {
+				return {
+					success: false as const,
+					error: "FAILED_TO_CLAIM" as const,
+					status: 400 as const,
+				};
+			}
+
+			return { success: true as const, ticket: newTicket[0] };
+		});
+	} catch (error: unknown) {
+		if (isUniqueViolation(error)) {
 			return {
 				success: false as const,
-				error: "FAILED_TO_CLAIM",
-				status: 400 as const,
+				error: "ALREADY_CLAIMED" as const,
+				status: 409 as const,
 			};
 		}
-
-		return { success: true as const, ticket: newTicket[0] };
-	});
+		throw error;
+	}
 }
