@@ -37,12 +37,13 @@ export async function executeCheckIn(ticketToken: string, eventId?: string) {
 		)
 		.returning({ id: tickets.id, checkedInAt: tickets.checkedInAt });
 
-	if (updated.length === 0) {
+	const ticket = updated[0];
+	if (!ticket) {
 		return {
 			success: false as const,
 			reason: "ALREADY_CHECKED_IN_OR_INVALID" as const,
 		};
 	}
 
-	return { success: true as const, ticket: updated[0] };
+	return { success: true as const, ticket };
 }

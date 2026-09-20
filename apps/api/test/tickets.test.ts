@@ -2,16 +2,16 @@ import { afterAll, beforeEach, describe, expect, it } from "bun:test";
 import { verifyTicket } from "@campus/crypto";
 import { db, events, pool, tickets } from "@campus/db";
 import { eq } from "drizzle-orm";
+import { Hono } from "hono";
 import { getTicketKeys } from "../src/lib/keys";
+import { executeCheckIn } from "../src/modules/tickets/check-in";
+import { ticketRoutes } from "../src/modules/tickets/routes";
 import {
 	claimTicketAtomic,
 	generateTicketToken,
 	getUserTickets,
 } from "../src/modules/tickets/service";
-import { executeCheckIn } from "../src/modules/tickets/check-in";
-import { ticketRoutes } from "../src/modules/tickets/routes";
 import { cleanupTestData, createTestEvent, createTestUser } from "./fixtures";
-import { Hono } from "hono";
 
 describe("Ticket Cryptographic Issuance Service", () => {
 	it("generates an Ed25519-signed ticket token verifiable via public key", async () => {

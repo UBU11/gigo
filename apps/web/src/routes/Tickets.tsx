@@ -1,6 +1,6 @@
+import type { UserTicketDto } from "@campus/contracts";
 import type React from "react";
 import { useEffect, useState } from "react";
-import type { UserTicketDto } from "@campus/contracts";
 import { StatusBadge } from "../components/common/StatusBadge";
 import { apiRequest } from "../lib/api-client";
 
