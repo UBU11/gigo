@@ -7,6 +7,7 @@ import {
 	claimTicketAtomic,
 	generateTicketToken,
 } from "../src/modules/tickets/service";
+import { executeCheckIn } from "../src/modules/tickets/check-in";
 import { cleanupTestData, createTestEvent, createTestUser } from "./fixtures";
 
 describe("Ticket Cryptographic Issuance Service", () => {
@@ -50,7 +51,6 @@ describe("Atomic Ticket Claiming & Concurrency Guard", () => {
 
 	afterAll(async () => {
 		await cleanupTestData();
-		await pool.end();
 	});
 
 	it("prevents duplicate ticket claims for the same user and event", async () => {
@@ -151,5 +151,96 @@ describe("Atomic Ticket Claiming & Concurrency Guard", () => {
 			.from(tickets)
 			.where(eq(tickets.eventId, testEvent.id));
 		expect(issuedTickets.length).toBe(1);
+	});
+});
+
+describe("Cryptographic Ticket Check-In Engine", () => {
+	beforeEach(async () => {
+		await cleanupTestData();
+	});
+
+	it("checks in a valid Ed25519-signed ticket successfully", async () => {
+		const testUser = await createTestUser();
+		const testEvent = await createTestEvent(10);
+		const claimResult = await claimTicketAtomic(testEvent.id, testUser.id);
+		expect(claimResult.success).toBe(true);
+		if (!claimResult.success) return;
+
+		const checkInResult = await executeCheckIn(
+			claimResult.ticket.signedToken,
+			testEvent.id,
+		);
+		expect(checkInResult.success).toBe(true);
+		if (checkInResult.success) {
+			expect(checkInResult.ticket.id).toBe(claimResult.ticket.id);
+		}
+
+		const [ticketRecord] = await db
+			.select()
+			.from(tickets)
+			.where(eq(tickets.id, claimResult.ticket.id));
+		expect(ticketRecord?.status).toBe("CHECKED_IN");
+		expect(ticketRecord?.checkedInAt).toBeDefined();
+	});
+
+	it("rejects check-in with invalid or tampered signature", async () => {
+		const testUser = await createTestUser();
+		const testEvent = await createTestEvent(10);
+		const claimResult = await claimTicketAtomic(testEvent.id, testUser.id);
+		expect(claimResult.success).toBe(true);
+		if (!claimResult.success) return;
+
+		const tamperedToken = `${claimResult.ticket.signedToken}tampered`;
+		const checkInResult = await executeCheckIn(tamperedToken, testEvent.id);
+		expect(checkInResult.success).toBe(false);
+		if (!checkInResult.success) {
+			expect(checkInResult.reason).toBe("INVALID_OR_EXPIRED_SIGNATURE");
+		}
+	});
+
+	it("rejects check-in when eventId does not match token payload", async () => {
+		const testUser = await createTestUser();
+		const testEvent = await createTestEvent(10);
+		const otherEvent = await createTestEvent(10);
+		const claimResult = await claimTicketAtomic(testEvent.id, testUser.id);
+		expect(claimResult.success).toBe(true);
+		if (!claimResult.success) return;
+
+		const checkInResult = await executeCheckIn(
+			claimResult.ticket.signedToken,
+			otherEvent.id,
+		);
+		expect(checkInResult.success).toBe(false);
+		if (!checkInResult.success) {
+			expect(checkInResult.reason).toBe("EVENT_MISMATCH");
+		}
+	});
+
+	it("prevents duplicate check-in of an already checked-in ticket", async () => {
+		const testUser = await createTestUser();
+		const testEvent = await createTestEvent(10);
+		const claimResult = await claimTicketAtomic(testEvent.id, testUser.id);
+		expect(claimResult.success).toBe(true);
+		if (!claimResult.success) return;
+
+		const firstCheckIn = await executeCheckIn(
+			claimResult.ticket.signedToken,
+			testEvent.id,
+		);
+		expect(firstCheckIn.success).toBe(true);
+
+		const secondCheckIn = await executeCheckIn(
+			claimResult.ticket.signedToken,
+			testEvent.id,
+		);
+		expect(secondCheckIn.success).toBe(false);
+		if (!secondCheckIn.success) {
+			expect(secondCheckIn.reason).toBe("ALREADY_CHECKED_IN_OR_INVALID");
+		}
+	});
+
+	afterAll(async () => {
+		await cleanupTestData();
+		await pool.end();
 	});
 });
