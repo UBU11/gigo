@@ -6,6 +6,7 @@ import { getTicketKeys } from "../src/lib/keys";
 import {
 	claimTicketAtomic,
 	generateTicketToken,
+	getUserTickets,
 } from "../src/modules/tickets/service";
 import { executeCheckIn } from "../src/modules/tickets/check-in";
 import { cleanupTestData, createTestEvent, createTestUser } from "./fixtures";
@@ -238,9 +239,29 @@ describe("Cryptographic Ticket Check-In Engine", () => {
 			expect(secondCheckIn.reason).toBe("ALREADY_CHECKED_IN_OR_INVALID");
 		}
 	});
+});
+
+describe("User Tickets Service", () => {
+	beforeEach(async () => {
+		await cleanupTestData();
+	});
 
 	afterAll(async () => {
 		await cleanupTestData();
 		await pool.end();
+	});
+
+	it("retrieves all claimed tickets for a user", async () => {
+		const user = await createTestUser();
+		const event1 = await createTestEvent(10);
+		const event2 = await createTestEvent(10);
+
+		await claimTicketAtomic(event1.id, user.id);
+		await claimTicketAtomic(event2.id, user.id);
+
+		const userTickets = await getUserTickets(user.id);
+		expect(userTickets.length).toBe(2);
+		expect(userTickets[0]?.userId).toBe(user.id);
+		expect(userTickets[1]?.userId).toBe(user.id);
 	});
 });

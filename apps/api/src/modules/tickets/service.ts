@@ -88,3 +88,20 @@ export async function claimTicketAtomic(eventId: string, userId: string) {
 		throw error;
 	}
 }
+
+// ponytail: fetch user tickets ordered chronologically
+export async function getUserTickets(userId: string) {
+	return db
+		.select({
+			id: tickets.id,
+			eventId: tickets.eventId,
+			userId: tickets.userId,
+			status: tickets.status,
+			signedToken: tickets.signedToken,
+			checkedInAt: tickets.checkedInAt,
+			createdAt: tickets.createdAt,
+		})
+		.from(tickets)
+		.where(eq(tickets.userId, userId))
+		.orderBy(tickets.createdAt);
+}
