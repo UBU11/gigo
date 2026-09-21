@@ -3,15 +3,16 @@ services:
     image: postgres:17-alpine
     container_name: campus_postgres
     environment:
-      POSTGRES_USER: campus
-      POSTGRES_PASSWORD: campus_secret
-      POSTGRES_DB: campus_db
-    ports:
-      - "5432:5432"
+      POSTGRES_USER: ${POSTGRES_USER:-campus}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-campus_secret}
+      POSTGRES_DB: ${POSTGRES_DB:-campus_db}
+    # ponytail: native compose isolation restricts port 5432 to internal docker network
+    expose:
+      - "5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U campus -d campus_db"]
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER:-campus} -d $${POSTGRES_DB:-campus_db}"]
       interval: 5s
       timeout: 5s
       retries: 5
@@ -19,12 +20,14 @@ services:
   dragonfly:
     image: docker.dragonflydb.io/dragonflydb/dragonfly:latest
     container_name: campus_dragonfly
-    ports:
-      - "6379:6379"
+    # ponytail: native flag for redis auth without extra config files
+    command: ["--requirepass", "${REDIS_PASSWORD:-dragonfly_secret}"]
+    expose:
+      - "6379"
     volumes:
       - dragonfly_data:/data
     healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
+      test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD:-dragonfly_secret}", "--no-auth-warning", "ping"]
       interval: 5s
       timeout: 5s
       retries: 5
@@ -35,13 +38,14 @@ services:
       dockerfile: apps/api/Dockerfile
     container_name: campus_api
     restart: unless-stopped
-    ports:
-      - "3000:3000"
+    # ponytail: internal api port isolated to caddy reverse proxy
+    expose:
+      - "3000"
     environment:
       PORT: 3000
-      DATABASE_URL: postgresql://campus:campus_secret@postgres:5432/campus_db
-      DRAGONFLY_URL: redis://dragonfly:6379
-      REDIS_URL: redis://dragonfly:6379
+      DATABASE_URL: postgresql://${POSTGRES_USER:-campus}:${POSTGRES_PASSWORD:-campus_secret}@postgres:5432/${POSTGRES_DB:-campus_db}
+      DRAGONFLY_URL: redis://:${REDIS_PASSWORD:-dragonfly_secret}@dragonfly:6379
+      REDIS_URL: redis://:${REDIS_PASSWORD:-dragonfly_secret}@dragonfly:6379
     depends_on:
       postgres:
         condition: service_healthy
@@ -52,6 +56,7 @@ services:
     image: caddy:2-alpine
     container_name: campus_caddy
     restart: unless-stopped
+    # ponytail: caddy is the sole ingress gateway binding to host interfaces
     ports:
       - "80:80"
       - "443:443"
