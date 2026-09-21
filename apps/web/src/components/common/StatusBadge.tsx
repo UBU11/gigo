@@ -1,5 +1,3 @@
-import type React from "react";
-
 interface StatusBadgeProps {
 	status: "ISSUED" | "CHECKED_IN" | "CANCELLED";
 }
