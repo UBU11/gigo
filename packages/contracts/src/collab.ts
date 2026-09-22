@@ -18,3 +18,15 @@ export const CollabPostDtoSchema = z.object({
 	createdAt: z.date(),
 });
 export type CollabPostDto = z.infer<typeof CollabPostDtoSchema>;
+
+export const CollabListResponseSchema = z.object({
+	success: z.literal(true),
+	projects: z.array(CollabPostDtoSchema),
+});
+export type CollabListResponse = z.infer<typeof CollabListResponseSchema>;
+
+export const CreateCollabResponseSchema = z.object({
+	success: z.literal(true),
+	collab: CollabPostDtoSchema,
+});
+export type CreateCollabResponse = z.infer<typeof CreateCollabResponseSchema>;

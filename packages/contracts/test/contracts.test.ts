@@ -1,12 +1,19 @@
 import { describe, expect, it } from "bun:test";
 import {
+	ApiErrorResponseSchema,
 	AuthSessionUserSchema,
+	CheckInTicketResponseSchema,
 	CheckInTicketSchema,
+	ClaimTicketResponseSchema,
 	ClaimTicketSchema,
+	CollabListResponseSchema,
 	CollabPostDtoSchema,
 	CreateCollabPostSchema,
+	CreateCollabResponseSchema,
 	CreateFeedPostSchema,
+	CreateFeedResponseSchema,
 	CreatePseudoProfileSchema,
+	FeedListResponseSchema,
 	FeedPostDtoSchema,
 	InstitutionalDomainSchema,
 	PseudoProfileSchema,
@@ -15,6 +22,7 @@ import {
 	TicketTokenPayloadSchema,
 	UpdatePublicProfileSchema,
 	UserTicketDtoSchema,
+	UserTicketsResponseSchema,
 } from "../src";
 
 describe("Contracts Schema Validation", () => {
@@ -198,5 +206,92 @@ describe("Contracts Schema Validation", () => {
 			createdAt: new Date(),
 		};
 		expect(CollabPostDtoSchema.safeParse(collabDto).success).toBe(true);
+	});
+
+	it("validates ApiErrorResponseSchema correctly", () => {
+		const valid = ApiErrorResponseSchema.safeParse({
+			success: false,
+			error: "EVENT_SOLD_OUT",
+		});
+		expect(valid.success).toBe(true);
+
+		const invalid = ApiErrorResponseSchema.safeParse({
+			success: true,
+			error: "EVENT_SOLD_OUT",
+		});
+		expect(invalid.success).toBe(false);
+	});
+
+	it("validates response envelopes for tickets, collab, and feed", () => {
+		const ticketsValid = UserTicketsResponseSchema.safeParse({
+			success: true,
+			tickets: [],
+		});
+		expect(ticketsValid.success).toBe(true);
+
+		const claimValid = ClaimTicketResponseSchema.safeParse({
+			success: true,
+			ticket: {
+				id: "123e4567-e89b-12d3-a456-426614174000",
+				eventId: "123e4567-e89b-12d3-a456-426614174001",
+				userId: "usr_1",
+				status: "ISSUED",
+				signedToken: "signed.jwt.token",
+				checkedInAt: null,
+				createdAt: new Date(),
+			},
+		});
+		expect(claimValid.success).toBe(true);
+
+		const checkInValid = CheckInTicketResponseSchema.safeParse({
+			success: true,
+			ticket: {
+				id: "123e4567-e89b-12d3-a456-426614174000",
+				checkedInAt: new Date(),
+			},
+		});
+		expect(checkInValid.success).toBe(true);
+
+		const collabValid = CollabListResponseSchema.safeParse({
+			success: true,
+			projects: [],
+		});
+		expect(collabValid.success).toBe(true);
+
+		const createCollabValid = CreateCollabResponseSchema.safeParse({
+			success: true,
+			collab: {
+				id: "123e4567-e89b-12d3-a456-426614174000",
+				title: "Hackathon Teammate Wanted",
+				description:
+					"Building an AI-powered campus tool. Need a frontend specialist.",
+				requiredSkills: ["TypeScript"],
+				ownerUserId: "usr_1",
+				ownerFullName: "Alex Rivera",
+				ownerDepartment: "Computer Science",
+				createdAt: new Date(),
+			},
+		});
+		expect(createCollabValid.success).toBe(true);
+
+		const feedValid = FeedListResponseSchema.safeParse({
+			success: true,
+			posts: [],
+		});
+		expect(feedValid.success).toBe(true);
+
+		const createFeedValid = CreateFeedResponseSchema.safeParse({
+			success: true,
+			post: {
+				id: "123e4567-e89b-12d3-a456-426614174000",
+				content: "Hello campus",
+				tag: "general",
+				authorPseudoHandle: "CampusOwl",
+				authorAvatarSeed: "owl123",
+				upvotes: 0,
+				createdAt: new Date(),
+			},
+		});
+		expect(createFeedValid.success).toBe(true);
 	});
 });
