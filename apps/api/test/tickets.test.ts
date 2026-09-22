@@ -197,7 +197,7 @@ describe("Cryptographic Ticket Check-In Engine", () => {
 		const checkInResult = await executeCheckIn(tamperedToken, testEvent.id);
 		expect(checkInResult.success).toBe(false);
 		if (!checkInResult.success) {
-			expect(checkInResult.reason).toBe("INVALID_OR_EXPIRED_SIGNATURE");
+			expect(checkInResult.error).toBe("INVALID_OR_EXPIRED_SIGNATURE");
 		}
 	});
 
@@ -215,7 +215,7 @@ describe("Cryptographic Ticket Check-In Engine", () => {
 		);
 		expect(checkInResult.success).toBe(false);
 		if (!checkInResult.success) {
-			expect(checkInResult.reason).toBe("EVENT_MISMATCH");
+			expect(checkInResult.error).toBe("EVENT_MISMATCH");
 		}
 	});
 
@@ -238,7 +238,7 @@ describe("Cryptographic Ticket Check-In Engine", () => {
 		);
 		expect(secondCheckIn.success).toBe(false);
 		if (!secondCheckIn.success) {
-			expect(secondCheckIn.reason).toBe("ALREADY_CHECKED_IN_OR_INVALID");
+			expect(secondCheckIn.error).toBe("ALREADY_CHECKED_IN_OR_INVALID");
 		}
 	});
 });
@@ -282,7 +282,7 @@ describe("Ticket HTTP Routes & RBAC Integration", () => {
 		const res = await app.request("/api/tickets");
 		expect(res.status).toBe(401);
 		const body = await res.json();
-		expect(body).toEqual({ error: "UNAUTHORIZED" });
+		expect(body).toEqual({ success: false, error: "UNAUTHORIZED" });
 	});
 
 	it("GET / returns user's claimed tickets when authenticated", async () => {
@@ -305,13 +305,122 @@ describe("Ticket HTTP Routes & RBAC Integration", () => {
 
 		const res = await app.request("/api/tickets");
 		expect(res.status).toBe(200);
-		const body = (await res.json()) as {
-			success: boolean;
-			tickets: Array<{ id: string; userId: string }>;
-		};
-		expect(body.success).toBe(true);
-		expect(body.tickets.length).toBe(1);
-		expect(body.tickets[0]?.userId).toBe(user.id);
+		const body = await res.json();
+		expect(body).toMatchObject({
+			success: true,
+			tickets: [{ userId: user.id }],
+		});
+	});
+
+	it("POST /claim rejects unauthenticated requests with 401", async () => {
+		const app = new Hono().route("/api/tickets", ticketRoutes);
+		const res = await app.request("/api/tickets/claim", {
+			method: "POST",
+			headers: { "Content-Type": "application/json" },
+			body: JSON.stringify({ eventId: "223e4567-e89b-12d3-a456-426614174001" }),
+		});
+		expect(res.status).toBe(401);
+		const body = await res.json();
+		expect(body).toEqual({ success: false, error: "UNAUTHORIZED" });
+	});
+
+	it("POST /claim claims a ticket successfully when authenticated", async () => {
+		const user = await createTestUser();
+		const event = await createTestEvent(10);
+
+		const app = new Hono();
+		app.use("*", async (c, next) => {
+			c.set("user", {
+				id: user.id,
+				name: user.name,
+				email: user.email,
+				emailVerified: user.emailVerified,
+				role: "user",
+			});
+			await next();
+		});
+		app.route("/api/tickets", ticketRoutes);
+
+		const res = await app.request("/api/tickets/claim", {
+			method: "POST",
+			headers: { "Content-Type": "application/json" },
+			body: JSON.stringify({ eventId: event.id }),
+		});
+		expect(res.status).toBe(201);
+		const body = await res.json();
+		expect(body).toMatchObject({
+			success: true,
+			ticket: { eventId: event.id, userId: user.id },
+		});
+	});
+
+	it("POST /claim returns 409 ALREADY_CLAIMED on duplicate claim", async () => {
+		const user = await createTestUser();
+		const event = await createTestEvent(10);
+		await claimTicketAtomic(event.id, user.id);
+
+		const app = new Hono();
+		app.use("*", async (c, next) => {
+			c.set("user", {
+				id: user.id,
+				name: user.name,
+				email: user.email,
+				emailVerified: user.emailVerified,
+				role: "user",
+			});
+			await next();
+		});
+		app.route("/api/tickets", ticketRoutes);
+
+		const res = await app.request("/api/tickets/claim", {
+			method: "POST",
+			headers: { "Content-Type": "application/json" },
+			body: JSON.stringify({ eventId: event.id }),
+		});
+		expect(res.status).toBe(409);
+		const body = await res.json();
+		expect(body).toEqual({ success: false, error: "ALREADY_CLAIMED" });
+	});
+
+	it("POST /claim returns 400 VALIDATION_FAILED when payload is invalid", async () => {
+		const user = await createTestUser();
+
+		const app = new Hono();
+		app.use("*", async (c, next) => {
+			c.set("user", {
+				id: user.id,
+				name: user.name,
+				email: user.email,
+				emailVerified: user.emailVerified,
+				role: "user",
+			});
+			await next();
+		});
+		app.route("/api/tickets", ticketRoutes);
+
+		const res = await app.request("/api/tickets/claim", {
+			method: "POST",
+			headers: { "Content-Type": "application/json" },
+			body: JSON.stringify({ eventId: "not-a-valid-uuid" }),
+		});
+		expect(res.status).toBe(400);
+		const body = await res.json();
+		expect(body).toMatchObject({
+			success: false,
+			error: "VALIDATION_FAILED",
+		});
+	});
+
+	it("POST /check-in rejects unauthenticated requests with 401", async () => {
+		const app = new Hono().route("/api/tickets", ticketRoutes);
+		const res = await app.request("/api/tickets/check-in", {
+			method: "POST",
+			headers: { "Content-Type": "application/json" },
+			body: JSON.stringify({ ticketToken: "valid-token-longer-than-10" }),
+		});
+		expect(res.status).toBe(401);
+		const body = await res.json();
+		expect(body).toEqual({ success: false, error: "UNAUTHORIZED" });
 	});
 
 	it("POST /check-in rejects regular student with 403 FORBIDDEN", async () => {
@@ -336,7 +445,36 @@ describe("Ticket HTTP Routes & RBAC Integration", () => {
 		});
 		expect(res.status).toBe(403);
 		const body = await res.json();
-		expect(body).toEqual({ error: "FORBIDDEN" });
+		expect(body).toEqual({ success: false, error: "FORBIDDEN" });
+	});
+
+	it("POST /check-in returns 400 VALIDATION_FAILED when payload is invalid", async () => {
+		const organizer = await createTestUser();
+
+		const app = new Hono();
+		app.use("*", async (c, next) => {
+			c.set("user", {
+				id: organizer.id,
+				name: organizer.name,
+				email: organizer.email,
+				emailVerified: organizer.emailVerified,
+				role: "organizer",
+			});
+			await next();
+		});
+		app.route("/api/tickets", ticketRoutes);
+
+		const res = await app.request("/api/tickets/check-in", {
+			method: "POST",
+			headers: { "Content-Type": "application/json" },
+			body: JSON.stringify({ ticketToken: "short" }),
+		});
+		expect(res.status).toBe(400);
+		const body = await res.json();
+		expect(body).toMatchObject({
+			success: false,
+			error: "VALIDATION_FAILED",
+		});
 	});
 
 	it("POST /check-in allows organizer to check in a valid ticket", async () => {
@@ -369,12 +507,11 @@ describe("Ticket HTTP Routes & RBAC Integration", () => {
 			}),
 		});
 		expect(res.status).toBe(200);
-		const body = (await res.json()) as {
-			success: boolean;
-			ticket: { id: string };
-		};
-		expect(body.success).toBe(true);
-		expect(body.ticket.id).toBe(claim.ticket.id);
+		const body = await res.json();
+		expect(body).toMatchObject({
+			success: true,
+			ticket: { id: claim.ticket.id },
+		});
 	});
 
 	it("POST /check-in returns 409 when ticket is already checked in", async () => {
@@ -410,6 +547,9 @@ describe("Ticket HTTP Routes & RBAC Integration", () => {
 		});
 		expect(res.status).toBe(409);
 		const body = await res.json();
-		expect(body).toEqual({ error: "ALREADY_CHECKED_IN_OR_INVALID" });
+		expect(body).toEqual({
+			success: false,
+			error: "ALREADY_CHECKED_IN_OR_INVALID",
+		});
 	});
 });

@@ -3,16 +3,13 @@ import { db, events, tickets } from "@campus/db";
 import { and, eq, gt, sql } from "drizzle-orm";
 import { getTicketKeys } from "../../lib/keys";
 
-interface UniqueViolationError {
-	code: string;
-}
-
-function isUniqueViolation(error: unknown): error is UniqueViolationError {
+function isUniqueViolation(error: unknown): error is { code: string } {
 	return (
 		typeof error === "object" &&
 		error !== null &&
 		"code" in error &&
-		(error as UniqueViolationError).code === "23505"
+		typeof Reflect.get(error, "code") === "string" &&
+		Reflect.get(error, "code") === "23505"
 	);
 }
 
@@ -89,7 +86,6 @@ export async function claimTicketAtomic(eventId: string, userId: string) {
 	}
 }
 
-// ponytail: fetch user tickets ordered chronologically
 export async function getUserTickets(userId: string) {
 	return db
 		.select({
