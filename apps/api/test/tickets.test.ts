@@ -292,7 +292,13 @@ describe("Ticket HTTP Routes & RBAC Integration", () => {
 
 		const app = new Hono();
 		app.use("*", async (c, next) => {
-			c.set("user", { id: user.id, role: "user" });
+			c.set("user", {
+				id: user.id,
+				name: user.name,
+				email: user.email,
+				emailVerified: user.emailVerified,
+				role: "user",
+			});
 			await next();
 		});
 		app.route("/api/tickets", ticketRoutes);
@@ -312,7 +318,13 @@ describe("Ticket HTTP Routes & RBAC Integration", () => {
 		const student = await createTestUser();
 		const app = new Hono();
 		app.use("*", async (c, next) => {
-			c.set("user", { id: student.id, role: "user" });
+			c.set("user", {
+				id: student.id,
+				name: student.name,
+				email: student.email,
+				emailVerified: student.emailVerified,
+				role: "user",
+			});
 			await next();
 		});
 		app.route("/api/tickets", ticketRoutes);
@@ -337,7 +349,13 @@ describe("Ticket HTTP Routes & RBAC Integration", () => {
 
 		const app = new Hono();
 		app.use("*", async (c, next) => {
-			c.set("user", { id: organizer.id, role: "organizer" });
+			c.set("user", {
+				id: organizer.id,
+				name: organizer.name,
+				email: organizer.email,
+				emailVerified: organizer.emailVerified,
+				role: "organizer",
+			});
 			await next();
 		});
 		app.route("/api/tickets", ticketRoutes);
@@ -371,7 +389,13 @@ describe("Ticket HTTP Routes & RBAC Integration", () => {
 
 		const app = new Hono();
 		app.use("*", async (c, next) => {
-			c.set("user", { id: organizer.id, role: "organizer" });
+			c.set("user", {
+				id: organizer.id,
+				name: organizer.name,
+				email: organizer.email,
+				emailVerified: organizer.emailVerified,
+				role: "organizer",
+			});
 			await next();
 		});
 		app.route("/api/tickets", ticketRoutes);
