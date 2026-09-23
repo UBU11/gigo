@@ -16,3 +16,15 @@ export const FeedPostDtoSchema = z.object({
 	createdAt: z.date(),
 });
 export type FeedPostDto = z.infer<typeof FeedPostDtoSchema>;
+
+export const FeedListResponseSchema = z.object({
+	success: z.literal(true),
+	posts: z.array(FeedPostDtoSchema),
+});
+export type FeedListResponse = z.infer<typeof FeedListResponseSchema>;
+
+export const CreateFeedResponseSchema = z.object({
+	success: z.literal(true),
+	post: FeedPostDtoSchema,
+});
+export type CreateFeedResponse = z.infer<typeof CreateFeedResponseSchema>;

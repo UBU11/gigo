@@ -1,15 +1,15 @@
+import type { ApiErrorResponse, AuthSessionUser } from "@campus/contracts";
 import type { Context, Next } from "hono";
 import { auth } from "../lib/auth";
 
 declare module "hono" {
 	interface ContextVariableMap {
-		user: unknown;
+		user: AuthSessionUser;
 		session: unknown;
 	}
 }
 
 export async function sessionMiddleware(c: Context, next: Next) {
-	// ponytail: reuse existing context user if injected upstream or in test
 	if (c.get("user")) {
 		await next();
 		return;
@@ -20,7 +20,11 @@ export async function sessionMiddleware(c: Context, next: Next) {
 	});
 
 	if (!session) {
-		return c.json({ error: "UNAUTHORIZED" }, 401);
+		const errorResponse: ApiErrorResponse = {
+			success: false,
+			error: "UNAUTHORIZED",
+		};
+		return c.json(errorResponse, 401);
 	}
 
 	c.set("user", session.user);

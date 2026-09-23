@@ -4,19 +4,18 @@ import { and, eq } from "drizzle-orm";
 import { getTicketKeys } from "../../lib/keys";
 
 export async function executeCheckIn(ticketToken: string, eventId?: string) {
-	// ponytail: minimal cryptographic check-in verifying Ed25519 signature and atomic db flip
 	const keys = await getTicketKeys();
 	const verification = await verifyTicket(ticketToken, keys.publicKeySpki);
 
 	if (!verification.valid || !verification.payload) {
 		return {
 			success: false as const,
-			reason: "INVALID_OR_EXPIRED_SIGNATURE" as const,
+			error: "INVALID_OR_EXPIRED_SIGNATURE" as const,
 		};
 	}
 
 	if (eventId && verification.payload.eid !== eventId) {
-		return { success: false as const, reason: "EVENT_MISMATCH" as const };
+		return { success: false as const, error: "EVENT_MISMATCH" as const };
 	}
 
 	const ticketId = verification.payload.tid;
@@ -41,7 +40,7 @@ export async function executeCheckIn(ticketToken: string, eventId?: string) {
 	if (!ticket) {
 		return {
 			success: false as const,
-			reason: "ALREADY_CHECKED_IN_OR_INVALID" as const,
+			error: "ALREADY_CHECKED_IN_OR_INVALID" as const,
 		};
 	}
 

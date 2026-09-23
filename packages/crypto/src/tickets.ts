@@ -9,7 +9,7 @@ export async function signTicket(
 ): Promise<string> {
 	const privateKey = await crypto.subtle.importKey(
 		"pkcs8",
-		privateKeyPkcs8 as BufferSource,
+		new Uint8Array(privateKeyPkcs8),
 		{ name: "Ed25519" },
 		false,
 		["sign"],
@@ -36,7 +36,7 @@ export async function verifyTicket(
 
 		const publicKey = await crypto.subtle.importKey(
 			"spki",
-			publicKeySpki as BufferSource,
+			new Uint8Array(publicKeySpki),
 			{ name: "Ed25519" },
 			false,
 			["verify"],

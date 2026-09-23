@@ -1,59 +1,97 @@
-import type { UserTicketDto } from "@campus/contracts";
-import type React from "react";
-import { useEffect, useState } from "react";
-import { StatusBadge } from "../components/common/StatusBadge";
-import { apiRequest } from "../lib/api-client";
+import type { JSX } from "react";
+import { ClaimTicketForm } from "../components/tickets/ClaimTicketForm";
+import { TicketItem } from "../components/tickets/TicketItem";
+import { useTickets } from "../hooks/useTickets";
 
-export function Tickets(): React.JSX.Element {
-	// ponytail: minimal client state for tickets fetching and rendering
-	const [tickets, setTickets] = useState<UserTicketDto[]>([]);
-	const [loading, setLoading] = useState(true);
-
-	useEffect(() => {
-		apiRequest<{ success: boolean; tickets: UserTicketDto[] }>("/api/tickets")
-			.then((res) => {
-				setTickets(res.tickets);
-				setLoading(false);
-			})
-			.catch(() => {
-				setLoading(false);
-			});
-	}, []);
+export function Tickets(): JSX.Element {
+	const { tickets, loading, error, claimTicket, refetch } = useTickets();
 
 	return (
-		<main style={{ padding: "1rem" }}>
-			<h3>Your Event Tickets</h3>
-			{loading && <p>Loading tickets...</p>}
-			{!loading && tickets.length === 0 && <p>No tickets claimed yet.</p>}
+		<main
+			style={{
+				padding: "1.5rem",
+				maxWidth: "680px",
+				margin: "0 auto",
+				display: "flex",
+				flexDirection: "column",
+				gap: "1.5rem",
+			}}
+		>
+			<header>
+				<h3 style={{ margin: "0 0 0.25rem 0", color: "#111827" }}>
+					Your Event Tickets
+				</h3>
+				<p style={{ margin: 0, color: "#6b7280", fontSize: "0.875rem" }}>
+					Cryptographically signed Ed25519 digital passes for campus admission.
+				</p>
+			</header>
+
+			<ClaimTicketForm onSubmit={claimTicket} />
+
+			{error && (
+				<div
+					style={{
+						padding: "0.75rem",
+						borderRadius: "6px",
+						backgroundColor: "#fee2e2",
+						color: "#b91c1c",
+						fontSize: "0.875rem",
+						display: "flex",
+						justifyContent: "space-between",
+						alignItems: "center",
+					}}
+				>
+					<span>{error}</span>
+					<button
+						type="button"
+						onClick={() => void refetch()}
+						style={{
+							padding: "0.25rem 0.5rem",
+							borderRadius: "4px",
+							border: "1px solid #b91c1c",
+							backgroundColor: "#ffffff",
+							color: "#b91c1c",
+							fontSize: "0.75rem",
+							cursor: "pointer",
+						}}
+					>
+						Retry
+					</button>
+				</div>
+			)}
+
+			{loading && (
+				<p style={{ color: "#6b7280", textAlign: "center" }}>
+					Loading tickets...
+				</p>
+			)}
+
+			{!loading && tickets.length === 0 && (
+				<p
+					style={{
+						color: "#6b7280",
+						textAlign: "center",
+						padding: "2rem 0",
+						border: "1px dashed #e5e7eb",
+						borderRadius: "8px",
+					}}
+				>
+					No tickets claimed yet.
+				</p>
+			)}
+
 			<ul
 				style={{
 					listStyle: "none",
 					padding: 0,
+					margin: 0,
 					display: "flex",
 					flexDirection: "column",
 					gap: "1rem",
 				}}
 			>
 				{tickets.map((ticket) => (
-					<li
-						key={ticket.id}
-						style={{
-							padding: "1rem",
-							border: "1px solid #e5e7eb",
-							borderRadius: "6px",
-							display: "flex",
-							justifyContent: "space-between",
-							alignItems: "center",
-						}}
-					>
-						<div>
-							<p style={{ margin: 0, fontWeight: "bold" }}>Pass: {ticket.id}</p>
-							<small style={{ color: "#6b7280" }}>
-								Issued: {new Date(ticket.createdAt).toLocaleDateString()}
-							</small>
-						</div>
-						<StatusBadge status={ticket.status} />
-					</li>
+					<TicketItem key={ticket.id} ticket={ticket} />
 				))}
 			</ul>
 		</main>

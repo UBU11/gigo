@@ -1,16 +1,16 @@
 import type { JSX } from "react";
-import { CreatePostForm } from "../components/feed/CreatePostForm";
-import { FeedCard } from "../components/feed/FeedCard";
-import { useFeed } from "../hooks/useFeed";
+import { CollabCard } from "../components/collab/CollabCard";
+import { CreateCollabForm } from "../components/collab/CreateCollabForm";
+import { useCollab } from "../hooks/useCollab";
 
-export function Feed(): JSX.Element {
-	const { posts, loading, error, createPost, refetch } = useFeed();
+export function Collab(): JSX.Element {
+	const { projects, loading, error, createProject, refetch } = useCollab();
 
 	return (
 		<main
 			style={{
 				padding: "1.5rem",
-				maxWidth: "680px",
+				maxWidth: "760px",
 				margin: "0 auto",
 				display: "flex",
 				flexDirection: "column",
@@ -19,14 +19,14 @@ export function Feed(): JSX.Element {
 		>
 			<header>
 				<h3 style={{ margin: "0 0 0.25rem 0", color: "#111827" }}>
-					Campus Discussion Feed
+					Peer Collaboration & Projects
 				</h3>
 				<p style={{ margin: 0, color: "#6b7280", fontSize: "0.875rem" }}>
-					Anonymous, pseudonymous campus community board.
+					Discover campus projects and recruit student teammates.
 				</p>
 			</header>
 
-			<CreatePostForm onSubmit={createPost} />
+			<CreateCollabForm onSubmit={createProject} />
 
 			{error && (
 				<div
@@ -62,11 +62,11 @@ export function Feed(): JSX.Element {
 
 			{loading && (
 				<p style={{ color: "#6b7280", textAlign: "center" }}>
-					Loading posts...
+					Loading collaboration projects...
 				</p>
 			)}
 
-			{!loading && posts.length === 0 && (
+			{!loading && projects.length === 0 && (
 				<p
 					style={{
 						color: "#6b7280",
@@ -76,15 +76,15 @@ export function Feed(): JSX.Element {
 						borderRadius: "8px",
 					}}
 				>
-					No posts yet. Be the first to start a discussion!
+					No collaboration projects yet. Start one above!
 				</p>
 			)}
 
 			<section
 				style={{ display: "flex", flexDirection: "column", gap: "1rem" }}
 			>
-				{posts.map((post) => (
-					<FeedCard key={post.id} post={post} />
+				{projects.map((project) => (
+					<CollabCard key={project.id} project={project} />
 				))}
 			</section>
 		</main>

@@ -1,30 +1,21 @@
-import type React from "react";
+import type { JSX } from "react";
 import { useState } from "react";
-import { Header } from "./components/layout/Header";
+import { Header, type NavRoute } from "./components/layout/Header";
+import { Collab } from "./routes/Collab";
 import { Feed } from "./routes/Feed";
 import { Home } from "./routes/Home";
 import { Tickets } from "./routes/Tickets";
 
-export function App(): React.JSX.Element {
-	const [route, setRoute] = useState<"home" | "tickets" | "feed">("home");
+export function App(): JSX.Element {
+	const [route, setRoute] = useState<NavRoute>("home");
 
 	return (
-		<div>
-			<Header />
-			<div style={{ display: "flex", gap: "10px", padding: "1rem" }}>
-				<button type="button" onClick={() => setRoute("home")}>
-					Home
-				</button>
-				<button type="button" onClick={() => setRoute("tickets")}>
-					Tickets
-				</button>
-				<button type="button" onClick={() => setRoute("feed")}>
-					Feed
-				</button>
-			</div>
+		<div style={{ minHeight: "100vh", backgroundColor: "#f9fafb" }}>
+			<Header currentRoute={route} onNavigate={setRoute} />
 			{route === "home" && <Home />}
 			{route === "tickets" && <Tickets />}
 			{route === "feed" && <Feed />}
+			{route === "collab" && <Collab />}
 		</div>
 	);
 }

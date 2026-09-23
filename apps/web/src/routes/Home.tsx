@@ -1,6 +1,6 @@
-import type React from "react";
+import type { JSX } from "react";
 
-export function Home(): React.JSX.Element {
+export function Home(): JSX.Element {
 	return (
 		<main style={{ padding: "1rem" }}>
 			<h3>Welcome to Campus Core</h3>
