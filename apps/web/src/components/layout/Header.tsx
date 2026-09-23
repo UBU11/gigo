@@ -1,3 +1,5 @@
+import type { JSX } from "react";
+import { useState } from "react";
 import { authClient } from "../../lib/auth-client";
 
 export type NavRoute = "home" | "tickets" | "feed" | "collab";
@@ -17,17 +19,39 @@ const NAV_ITEMS: readonly { route: NavRoute; label: string }[] = [
 export function Header({
 	currentRoute,
 	onNavigate,
-}: HeaderProps = {}): React.JSX.Element {
+}: HeaderProps = {}): JSX.Element {
 	const { data: sessionData, isPending } = authClient.useSession();
+	const [authError, setAuthError] = useState<string | null>(null);
+	const [isAuthenticating, setIsAuthenticating] = useState(false);
 
 	const handleSignIn = async () => {
-		await authClient.signIn.social({
-			provider: "google",
-		});
+		setAuthError(null);
+		setIsAuthenticating(true);
+		try {
+			await authClient.signIn.social({
+				provider: "google",
+			});
+		} catch (error) {
+			setAuthError(
+				error instanceof Error ? error.message : "Sign in failed. Try again.",
+			);
+		} finally {
+			setIsAuthenticating(false);
+		}
 	};
 
 	const handleSignOut = async () => {
-		await authClient.signOut();
+		setAuthError(null);
+		setIsAuthenticating(true);
+		try {
+			await authClient.signOut();
+		} catch (error) {
+			setAuthError(
+				error instanceof Error ? error.message : "Sign out failed. Try again.",
+			);
+		} finally {
+			setIsAuthenticating(false);
+		}
 	};
 
 	return (
@@ -65,6 +89,11 @@ export function Header({
 			</div>
 
 			<div style={{ display: "flex", alignItems: "center", gap: "1rem" }}>
+				{authError && (
+					<span style={{ color: "#dc2626", fontSize: "0.75rem" }}>
+						{authError}
+					</span>
+				)}
 				{isPending ? (
 					<span style={{ color: "#6b7280", fontSize: "0.875rem" }}>
 						Loading...
@@ -79,32 +108,36 @@ export function Header({
 						<button
 							type="button"
 							onClick={handleSignOut}
+							disabled={isAuthenticating}
 							style={{
 								padding: "0.4rem 0.8rem",
 								borderRadius: "4px",
 								border: "1px solid #d1d5db",
 								background: "#fff",
-								cursor: "pointer",
+								cursor: isAuthenticating ? "not-allowed" : "pointer",
+								opacity: isAuthenticating ? 0.6 : 1,
 							}}
 						>
-							Sign Out
+							{isAuthenticating ? "Signing out..." : "Sign Out"}
 						</button>
 					</div>
 				) : (
 					<button
 						type="button"
 						onClick={handleSignIn}
+						disabled={isAuthenticating}
 						style={{
 							padding: "0.4rem 0.8rem",
 							borderRadius: "4px",
 							border: "none",
 							background: "#2563eb",
 							color: "#fff",
-							cursor: "pointer",
+							cursor: isAuthenticating ? "not-allowed" : "pointer",
+							opacity: isAuthenticating ? 0.6 : 1,
 							fontWeight: "500",
 						}}
 					>
-						Sign in with Google
+						{isAuthenticating ? "Connecting..." : "Sign in with Google"}
 					</button>
 				)}
 			</div>
