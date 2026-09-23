@@ -1,5 +1,8 @@
-import type { CreateCollabPost } from "@campus/contracts";
-import type React from "react";
+import {
+	type CreateCollabPost,
+	CreateCollabPostSchema,
+} from "@campus/contracts";
+import type { FormEvent, JSX } from "react";
 import { useState } from "react";
 
 interface CreateCollabFormProps {
@@ -8,42 +11,39 @@ interface CreateCollabFormProps {
 
 export function CreateCollabForm({
 	onSubmit,
-}: CreateCollabFormProps): React.JSX.Element {
+}: CreateCollabFormProps): JSX.Element {
 	const [title, setTitle] = useState("");
 	const [description, setDescription] = useState("");
 	const [skillsInput, setSkillsInput] = useState("");
 	const [submitting, setSubmitting] = useState(false);
 	const [validationError, setValidationError] = useState<string | null>(null);
 
-	const handleSubmit = async (e: React.FormEvent) => {
+	const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
 		e.preventDefault();
-		const trimmedTitle = title.trim();
-		const trimmedDesc = description.trim();
-
-		if (trimmedTitle.length < 3) {
-			setValidationError("Title must be at least 3 characters.");
-			return;
-		}
-
-		if (trimmedDesc.length < 10) {
-			setValidationError("Description must be at least 10 characters.");
-			return;
-		}
 
 		const parsedSkills = skillsInput
 			.split(",")
 			.map((s) => s.trim())
-			.filter(Boolean)
-			.slice(0, 10);
+			.filter((s) => s.length > 0);
+
+		const validation = CreateCollabPostSchema.safeParse({
+			title: title.trim(),
+			description: description.trim(),
+			requiredSkills: parsedSkills,
+		});
+
+		if (!validation.success) {
+			const firstIssue = validation.error.issues[0];
+			setValidationError(
+				firstIssue?.message || "Invalid collaboration post data",
+			);
+			return;
+		}
 
 		setValidationError(null);
 		setSubmitting(true);
 		try {
-			await onSubmit({
-				title: trimmedTitle,
-				description: trimmedDesc,
-				requiredSkills: parsedSkills,
-			});
+			await onSubmit(validation.data);
 			setTitle("");
 			setDescription("");
 			setSkillsInput("");

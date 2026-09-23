@@ -1,19 +1,22 @@
 import type { CollabPostDto } from "@campus/contracts";
-import type React from "react";
+import type { JSX } from "react";
 
 interface CollabCardProps {
 	project: CollabPostDto;
 }
 
-export function CollabCard({ project }: CollabCardProps): React.JSX.Element {
-	const formattedDate = new Date(project.createdAt).toLocaleDateString(
-		undefined,
-		{
-			month: "short",
-			day: "numeric",
-			year: "numeric",
-		},
-	);
+export function CollabCard({ project }: CollabCardProps): JSX.Element {
+	const parsedDate = new Date(project.createdAt);
+	const formattedDate = Number.isNaN(parsedDate.getTime())
+		? "Unknown date"
+		: parsedDate.toLocaleDateString(undefined, {
+				month: "short",
+				day: "numeric",
+				year: "numeric",
+			});
+	const skills = Array.isArray(project.requiredSkills)
+		? project.requiredSkills
+		: [];
 
 	return (
 		<article
@@ -71,9 +74,9 @@ export function CollabCard({ project }: CollabCardProps): React.JSX.Element {
 				{project.description}
 			</p>
 
-			{project.requiredSkills.length > 0 && (
+			{skills.length > 0 && (
 				<div style={{ display: "flex", flexWrap: "wrap", gap: "0.4rem" }}>
-					{project.requiredSkills.map((skill) => (
+					{skills.map((skill) => (
 						<span
 							key={skill}
 							style={{
