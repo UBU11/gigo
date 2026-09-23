@@ -1,4 +1,4 @@
-import type React from "react";
+import type { JSX } from "react";
 import { useState } from "react";
 import { Header, type NavRoute } from "./components/layout/Header";
 import { Collab } from "./routes/Collab";
@@ -6,7 +6,7 @@ import { Feed } from "./routes/Feed";
 import { Home } from "./routes/Home";
 import { Tickets } from "./routes/Tickets";
 
-export function App(): React.JSX.Element {
+export function App(): JSX.Element {
 	const [route, setRoute] = useState<NavRoute>("home");
 
 	return (
