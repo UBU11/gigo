@@ -1,5 +1,5 @@
 import type { UserTicketDto } from "@campus/contracts";
-import type React from "react";
+import type { JSX } from "react";
 import { useState } from "react";
 import { StatusBadge } from "../common/StatusBadge";
 import { TicketQrPass } from "./TicketQrPass";
@@ -8,17 +8,17 @@ interface TicketItemProps {
 	ticket: UserTicketDto;
 }
 
-export function TicketItem({ ticket }: TicketItemProps): React.JSX.Element {
+export function TicketItem({ ticket }: TicketItemProps): JSX.Element {
 	const [showPass, setShowPass] = useState(false);
 
-	const formattedDate = new Date(ticket.createdAt).toLocaleDateString(
-		undefined,
-		{
-			year: "numeric",
-			month: "short",
-			day: "numeric",
-		},
-	);
+	const parsedDate = new Date(ticket.createdAt);
+	const formattedDate = Number.isNaN(parsedDate.getTime())
+		? "Unknown date"
+		: parsedDate.toLocaleDateString(undefined, {
+				year: "numeric",
+				month: "short",
+				day: "numeric",
+			});
 
 	return (
 		<li

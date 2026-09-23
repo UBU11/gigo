@@ -1,6 +1,6 @@
 import type { UserTicketDto } from "@campus/contracts";
 import QRCode from "qrcode";
-import type React from "react";
+import type { JSX } from "react";
 import { useEffect, useState } from "react";
 import { StatusBadge } from "../common/StatusBadge";
 
@@ -12,12 +12,18 @@ interface TicketQrPassProps {
 export function TicketQrPass({
 	ticket,
 	onClose,
-}: TicketQrPassProps): React.JSX.Element {
+}: TicketQrPassProps): JSX.Element {
 	const [qrDataUrl, setQrDataUrl] = useState<string | null>(null);
 	const [generationError, setGenerationError] = useState<string | null>(null);
 
 	useEffect(() => {
 		let isMounted = true;
+		setGenerationError(null);
+
+		if (!ticket.signedToken || ticket.signedToken.trim().length === 0) {
+			setGenerationError("Ticket is missing a valid signature token");
+			return;
+		}
 
 		QRCode.toDataURL(ticket.signedToken, {
 			width: 220,
