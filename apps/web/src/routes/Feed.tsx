@@ -1,10 +1,10 @@
-import type React from "react";
+import type { JSX } from "react";
 import { CreatePostForm } from "../components/feed/CreatePostForm";
 import { FeedCard } from "../components/feed/FeedCard";
 import { useFeed } from "../hooks/useFeed";
 
-export function Feed(): React.JSX.Element {
-	const { posts, loading, error, createPost } = useFeed();
+export function Feed(): JSX.Element {
+	const { posts, loading, error, createPost, refetch } = useFeed();
 
 	return (
 		<main
@@ -36,9 +36,27 @@ export function Feed(): React.JSX.Element {
 						backgroundColor: "#fee2e2",
 						color: "#b91c1c",
 						fontSize: "0.875rem",
+						display: "flex",
+						justifyContent: "space-between",
+						alignItems: "center",
 					}}
 				>
-					{error}
+					<span>{error}</span>
+					<button
+						type="button"
+						onClick={() => void refetch()}
+						style={{
+							padding: "0.25rem 0.5rem",
+							borderRadius: "4px",
+							border: "1px solid #b91c1c",
+							backgroundColor: "#ffffff",
+							color: "#b91c1c",
+							fontSize: "0.75rem",
+							cursor: "pointer",
+						}}
+					>
+						Retry
+					</button>
 				</div>
 			)}
 

@@ -1,17 +1,22 @@
 import type { FeedPostDto } from "@campus/contracts";
-import type React from "react";
+import type { JSX } from "react";
 
 interface FeedCardProps {
 	post: FeedPostDto;
 }
 
-export function FeedCard({ post }: FeedCardProps): React.JSX.Element {
-	const formattedDate = new Date(post.createdAt).toLocaleDateString(undefined, {
-		month: "short",
-		day: "numeric",
-		hour: "2-digit",
-		minute: "2-digit",
-	});
+export function FeedCard({ post }: FeedCardProps): JSX.Element {
+	const parsedDate = new Date(post.createdAt);
+	const formattedDate = Number.isNaN(parsedDate.getTime())
+		? "Unknown date"
+		: parsedDate.toLocaleDateString(undefined, {
+				month: "short",
+				day: "numeric",
+				hour: "2-digit",
+				minute: "2-digit",
+			});
+	const avatarSeed = (post.authorAvatarSeed || "??").slice(0, 2).toUpperCase();
+	const upvotes = typeof post.upvotes === "number" ? post.upvotes : 0;
 
 	return (
 		<article
@@ -47,7 +52,7 @@ export function FeedCard({ post }: FeedCardProps): React.JSX.Element {
 							fontWeight: "bold",
 						}}
 					>
-						{post.authorAvatarSeed.slice(0, 2).toUpperCase()}
+						{avatarSeed}
 					</span>
 					<strong style={{ fontSize: "0.875rem", color: "#1f2937" }}>
 						{post.authorPseudoHandle}
@@ -91,7 +96,7 @@ export function FeedCard({ post }: FeedCardProps): React.JSX.Element {
 						gap: "0.25rem",
 					}}
 				>
-					▲ {post.upvotes} {post.upvotes === 1 ? "upvote" : "upvotes"}
+					▲ {upvotes} {upvotes === 1 ? "upvote" : "upvotes"}
 				</span>
 			</div>
 		</article>

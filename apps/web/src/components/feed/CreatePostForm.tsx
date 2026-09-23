@@ -1,35 +1,40 @@
-import type { CreateFeedPost } from "@campus/contracts";
-import type React from "react";
+import { type CreateFeedPost, CreateFeedPostSchema } from "@campus/contracts";
+import type { FormEvent, JSX } from "react";
 import { useState } from "react";
 
 interface CreatePostFormProps {
 	onSubmit: (payload: CreateFeedPost) => Promise<unknown>;
 }
 
-export function CreatePostForm({
-	onSubmit,
-}: CreatePostFormProps): React.JSX.Element {
+export function CreatePostForm({ onSubmit }: CreatePostFormProps): JSX.Element {
 	const [content, setContent] = useState("");
 	const [tag, setTag] = useState("");
 	const [submitting, setSubmitting] = useState(false);
 	const [validationError, setValidationError] = useState<string | null>(null);
 
-	const handleSubmit = async (e: React.FormEvent) => {
+	const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
 		e.preventDefault();
-		const trimmedContent = content.trim();
-		if (!trimmedContent) {
-			setValidationError("Post content cannot be empty.");
+
+		const payload: Record<string, unknown> = {
+			content: content.trim(),
+		};
+		const trimmedTag = tag.trim();
+		if (trimmedTag) {
+			payload.tag = trimmedTag;
+		}
+
+		const validation = CreateFeedPostSchema.safeParse(payload);
+		if (!validation.success) {
+			setValidationError(
+				validation.error.issues[0]?.message || "Invalid post data",
+			);
 			return;
 		}
 
 		setValidationError(null);
 		setSubmitting(true);
 		try {
-			const payload: CreateFeedPost = {
-				content: trimmedContent,
-				...(tag.trim() ? { tag: tag.trim() } : {}),
-			};
-			await onSubmit(payload);
+			await onSubmit(validation.data);
 			setContent("");
 			setTag("");
 		} catch (err) {
