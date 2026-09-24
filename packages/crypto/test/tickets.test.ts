@@ -31,7 +31,7 @@ describe("Ed25519 Ticket Cryptography", () => {
 		};
 
 		const token = await signTicket(payload, keys.privateKeyPkcs8);
-		const tampered = token.slice(0, -4) + "AAAA";
+		const tampered = `${token.slice(0, -4)}AAAA`;
 
 		const result = await verifyTicket(tampered, keys.publicKeySpki);
 		expect(result.valid).toBe(false);

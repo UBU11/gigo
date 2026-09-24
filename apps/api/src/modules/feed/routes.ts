@@ -1,18 +1,24 @@
 import { CreateFeedPostSchema } from "@campus/contracts";
-import { zValidator } from "@hono/zod-validator";
 import { Hono } from "hono";
 import { sessionMiddleware } from "../../middleware/session";
+import { validatedJson } from "../../middleware/validator";
+import { createFeedPost, getFeedPosts, toggleFeedPostVote } from "./service";
 
 export const feedRoutes = new Hono()
 	.use("*", sessionMiddleware)
 	.get("/", async (c) => {
-		// Zero-Trust: Feed only returns pseudonymous handles. Never joins users table.
-		return c.json({ posts: [] });
+		const posts = await getFeedPosts();
+		return c.json({ success: true, posts }, 200);
 	})
-	.post("/", zValidator("json", CreateFeedPostSchema), async (c) => {
+	.post("/", validatedJson(CreateFeedPostSchema), async (c) => {
+		const user = c.get("user");
 		const data = c.req.valid("json");
-		return c.json(
-			{ success: true, post: { id: crypto.randomUUID(), ...data } },
-			201,
-		);
+		const post = await createFeedPost(user.id, data);
+		return c.json({ success: true, post }, 201);
+	})
+	.post("/:id/vote", async (c) => {
+		const user = c.get("user");
+		const postId = c.req.param("id");
+		const result = await toggleFeedPostVote(postId, user.id);
+		return c.json({ success: true, ...result }, 200);
 	});

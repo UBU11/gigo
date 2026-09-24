@@ -1,6 +1,6 @@
 import { afterAll, beforeEach, describe, expect, it } from "bun:test";
 import { verifyTicket } from "@campus/crypto";
-import { db, events, pool, tickets } from "@campus/db";
+import { db, events, tickets } from "@campus/db";
 import { eq } from "drizzle-orm";
 import { Hono } from "hono";
 import { getTicketKeys } from "../src/lib/keys";
@@ -274,7 +274,6 @@ describe("Ticket HTTP Routes & RBAC Integration", () => {
 
 	afterAll(async () => {
 		await cleanupTestData();
-		await pool.end();
 	});
 
 	it("GET / rejects unauthenticated requests with 401", async () => {
